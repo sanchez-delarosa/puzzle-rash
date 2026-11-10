@@ -38,6 +38,7 @@
     <section class="view train" id="view-train">
       <div class="board-wrap">
         <div id="board"></div>
+        <div class="countdown" id="countdown" aria-live="assertive" hidden><span class="count-num"></span></div>
       </div>
 
       <aside class="side">
@@ -237,6 +238,10 @@
         <label class="check">
           <input type="checkbox" name="avoidRecent">
           <span>Avoid puzzles from your last 500 attempts</span>
+        </label>
+        <label class="check">
+          <input type="checkbox" name="countdown">
+          <span>Count down 3, 2, 1, Go before each run</span>
         </label>
         <div class="settings-actions">
           <button type="submit" class="btn primary">Save settings</button>

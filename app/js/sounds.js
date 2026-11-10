@@ -114,6 +114,9 @@ const SOUNDS = {
     tone(t, 1046.5, 0.07, { type: 'square', gain: 0.09, lowpass: 3000 });
     tone(t + 0.15, 1046.5, 0.07, { type: 'square', gain: 0.09, lowpass: 3000 });
   },
+  count: (t) => {
+    tone(t, 659.3, 0.12, { type: 'triangle', gain: 0.2 });
+  },
   start: (t) => {
     tone(t, 523.3, 0.1, { type: 'triangle', gain: 0.14 });
     tone(t + 0.08, 784, 0.16, { type: 'triangle', gain: 0.14 });

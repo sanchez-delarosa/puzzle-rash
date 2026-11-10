@@ -439,17 +439,24 @@ export class Board {
   }
 
   // Drop a dragged piece back on its own square (it glides back) and clear the selection.
-  cancelGrab(fromRightClick = true) {
+  // fromUser (right-click or Esc): a piece being dragged glides back and stays
+  // selected with its moves shown; a second right-click/Esc then deselects it.
+  // From code (fromUser = false): drop everything.
+  cancelGrab(fromUser = true) {
     const d = this.drag;
     if (d) {
       this.drag = null;
       d.el.classList.remove('dragging');
       this._place(d.el, d.from);
     }
-    if ((d || this.premove) && fromRightClick) {
+    if ((d || this.premove) && fromUser) {
       // the menu for this right-click may fire outside the board, where the cursor was
       this._suppressMenu = true;
       setTimeout(() => { this._suppressMenu = false; }, 1500);
+    }
+    if (d && fromUser && this._ownPiece(d.from)) {
+      this._select(d.from);
+      return;
     }
     this.clearPremove();
     this._clearSelection();
@@ -503,25 +510,52 @@ export class Board {
     this._dragTo(e.clientX, e.clientY);
   }
 
+  // Where a dragged piece should land: the square under the cursor if it's a
+  // legal destination, otherwise the nearest legal destination whose centre is
+  // within DROP_REACH squares of the cursor (so a slightly-off release still counts).
+  _dropTarget(from, clientX, clientY) {
+    const rect = this.root.getBoundingClientRect();
+    const size = rect.width / 8;
+    const px = (clientX - rect.left) / size; // cursor in square units, screen orientation
+    const py = (clientY - rect.top) / size;
+    let best = -1;
+    let bestDist = Infinity;
+    for (const m of this._targets(from)) {
+      const [x, y] = this._xy(m.to);
+      const dist = Math.hypot(px - (x + 0.5), py - (y + 0.5));
+      if (dist < bestDist) { bestDist = dist; best = m.to; }
+    }
+    return bestDist <= Board.DROP_REACH ? best : -1;
+  }
+
+  static DROP_REACH = 0.85; // squares; the edge of a square is 0.5 from its centre
+
   _up(e) {
     const d = this.drag;
     if (!d) return;
     this.drag = null;
     d.el.classList.remove('dragging');
-    const to = this._sqFromPoint(e.clientX, e.clientY);
-    if (to >= 0 && to !== d.from) {
-      // a legal drop lands instantly on its square; anything else snaps back
-      const legal = !this._premoveMode() && this._targets(d.from).some((m) => m.to === to);
-      d.el.classList.add('no-anim');
-      this._place(d.el, legal ? to : d.from);
-      requestAnimationFrame(() => d.el.classList.remove('no-anim'));
-      this._tryMove(d.from, to);
-    } else {
+    const over = this._sqFromPoint(e.clientX, e.clientY);
+    // a plain click on the piece (or putting it back on its own square)
+    if (!d.moved || over === d.from) {
       d.el.classList.add('no-anim');
       this._place(d.el, d.from);
       requestAnimationFrame(() => d.el.classList.remove('no-anim'));
       if (d.reclick && !d.moved) this._clearSelection();
+      return;
     }
+    const to = this._dropTarget(d.from, e.clientX, e.clientY);
+    if (to < 0) {
+      // nowhere legal nearby (or off the board): glide back, stay selected with moves shown
+      this._place(d.el, d.from);
+      this._select(d.from);
+      return;
+    }
+    // a real move lands instantly on its square; a premove only gets queued, so the piece goes home
+    d.el.classList.add('no-anim');
+    this._place(d.el, this._premoveMode() ? d.from : to);
+    requestAnimationFrame(() => d.el.classList.remove('no-anim'));
+    this._tryMove(d.from, to);
   }
 
   async _tryMove(from, to) {

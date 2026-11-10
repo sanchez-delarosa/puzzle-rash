@@ -80,6 +80,24 @@ main { padding: 24px; max-width: 1240px; margin: 0 auto; }
 .train { display: grid; grid-template-columns: minmax(280px, 680px) minmax(300px, 380px); gap: 28px; align-items: start; justify-content: center; }
 .board-wrap { width: min(100%, calc(100vh - 130px)); justify-self: end; }
 .side { position: relative; }
+.board-wrap { position: relative; }
+.countdown {
+  position: absolute; inset: 0; z-index: 30; display: grid; place-items: center;
+  background: color-mix(in srgb, var(--bg) 55%, transparent); backdrop-filter: blur(6px);
+  border-radius: 6px; pointer-events: auto;
+}
+.countdown.go { background: transparent; backdrop-filter: none; pointer-events: none; }
+.count-num {
+  font-family: var(--font-display); font-weight: 700; font-size: clamp(96px, 22vmin, 220px); line-height: 1;
+  color: var(--ink); text-shadow: 0 2px 0 var(--panel), 0 0 24px var(--panel);
+  font-variant-numeric: tabular-nums;
+}
+.countdown.go .count-num { color: var(--accent); }
+.count-num.pop { animation: count-pop 800ms cubic-bezier(.2, .8, .3, 1) both; }
+.countdown.go .count-num.pop { animation: count-go 600ms ease-out both; }
+@keyframes count-pop { 0% { transform: scale(1.6); opacity: 0; } 18% { transform: scale(1); opacity: 1; } 80% { opacity: 1; } 100% { transform: scale(0.85); opacity: 0; } }
+@keyframes count-go { 0% { transform: scale(0.7); opacity: 0; } 25% { transform: scale(1.05); opacity: 1; } 100% { transform: scale(1.35); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .count-num.pop, .countdown.go .count-num.pop { animation: none; } }
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; }
 .panel-title { font-family: var(--font-display); font-weight: 600; font-size: 26px; margin: 0 0 14px; line-height: 1.1; }
 .fine { font-size: 14px; color: var(--muted); margin: 12px 0 0; }

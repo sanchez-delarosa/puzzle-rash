@@ -13,7 +13,7 @@ import { play, configure as configureSound } from './sounds.js';
 const A = window.PR_APPEARANCE;
 
 const $ = (s) => document.querySelector(s);
-const DEFAULTS = { startRating: 600, step: 40, showSolution: true, avoidRecent: true };
+const DEFAULTS = { startRating: 600, step: 40, showSolution: true, avoidRecent: true, countdown: true };
 const REASONS = { time: "Time's up", strikes: 'Three misses', stopped: 'You ended the run', 'out-of-puzzles': 'No puzzles left at this level' };
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
@@ -106,8 +106,55 @@ function recentIds() {
   return new Set(ids);
 }
 
-function startRun(mode = selectedMode()) {
-  if (!pool) return;
+// ---- 3, 2, 1, Go ------------------------------------------------------------
+// Shown over the board before a run. The clock doesn't run until "Go".
+const COUNT_STEP_MS = 800;
+const GO_MS = 600;
+let countdown = null; // { cancel } while 3, 2, 1 is showing
+let goFadeTimer = null; // only fades the "Go!" label; the run is already live
+
+function runCountdown() {
+  return new Promise((resolve) => {
+    const el = $('#countdown');
+    const num = el.querySelector('.count-num');
+    const steps = ['3', '2', '1', 'Go!'];
+    let i = 0;
+    let timerId = null;
+    clearTimeout(goFadeTimer);
+    el.classList.remove('go');
+    countdown = {
+      cancel: () => {
+        clearTimeout(timerId);
+        el.hidden = true;
+        countdown = null;
+        resolve(false);
+      },
+    };
+    const step = () => {
+      const label = steps[i];
+      num.textContent = label;
+      num.classList.remove('pop');
+      void num.offsetWidth; // restart the animation
+      num.classList.add('pop');
+      if (label === 'Go!') {
+        // the countdown is over now; the label just fades over the first puzzle
+        countdown = null;
+        el.classList.add('go');
+        goFadeTimer = setTimeout(() => { el.hidden = true; el.classList.remove('go'); }, GO_MS);
+        resolve(true);
+        return;
+      }
+      play('count');
+      i++;
+      timerId = setTimeout(step, COUNT_STEP_MS);
+    };
+    el.hidden = false;
+    step();
+  });
+}
+
+async function startRun(mode = selectedMode()) {
+  if (!pool || countdown) return;
   rush = new Rush({
     board, pool, mode, settings, recent: recentIds(),
     onUpdate: renderLive,
@@ -115,7 +162,24 @@ function startRun(mode = selectedMode()) {
   });
   showPanel('live');
   $('#tiles').innerHTML = '';
+  $('#toMove').textContent = 'Get ready';
+  board.resetInput();
+  board.clearHint();
+  const limit = MODES[mode].timeMs;
+  $('#clock').textContent = limit == null ? '0:00' : fmtClock(limit);
+  $('#clock').classList.remove('low');
+  renderLive();
   document.body.classList.add('running');
+  if (settings.countdown !== false) {
+    const go = await runCountdown();
+    if (!go) { // cancelled with End run or Esc: back to the mode picker, nothing saved
+      rush = null;
+      document.body.classList.remove('running');
+      renderSetup();
+      showPanel('setup');
+      return;
+    }
+  }
   rush.start();
   renderLive();
   clearInterval(timer);
@@ -126,7 +190,7 @@ function startRun(mode = selectedMode()) {
 }
 
 function renderClock() {
-  if (!rush) return;
+  if (!rush || rush.t0 == null) return; // not started yet (countdown)
   const rem = rush.remainingMs();
   const clock = $('#clock');
   if (rem == null) {
@@ -210,7 +274,11 @@ function renderResult(run, prevBest) {
 $('#startBtn').addEventListener('click', () => startRun());
 $('#againBtn').addEventListener('click', () => startRun(rush ? rush.mode : selectedMode()));
 $('#changeModeBtn').addEventListener('click', () => { renderSetup(); showPanel('setup'); });
-$('#endBtn').addEventListener('click', () => rush && rush.end('stopped'));
+$('#endBtn').addEventListener('click', () => {
+  if (countdown) countdown.cancel();
+  else if (rush) rush.end('stopped');
+});
+window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && countdown) countdown.cancel(); });
 $('#toProgressBtn').addEventListener('click', () => {
   document.querySelector(`#pMode [data-v="${rush ? rush.mode : '5min'}"]`)?.click();
   showView('progress');
@@ -352,6 +420,7 @@ function fillSettings() {
   form.step.value = settings.step;
   form.showSolution.checked = settings.showSolution;
   form.avoidRecent.checked = settings.avoidRecent;
+  form.countdown.checked = settings.countdown !== false;
   $('#storageNote').textContent = store.mode === 'server'
     ? 'Your history is saved to data/history.json in the project folder, with a dated copy in data/backups/ each day you play.'
     : 'The local server isn\'t running, so history is saved in this browser only. Start the app with start.bat or python serve.py to save it to a file.';
@@ -366,6 +435,7 @@ form.addEventListener('submit', async (e) => {
     step: Math.max(0, Math.min(200, Number(form.step.value) || 0)),
     showSolution: form.showSolution.checked,
     avoidRecent: form.avoidRecent.checked,
+    countdown: form.countdown.checked,
   };
   await saveAllSettings();
   $('#settingsSaved').textContent = 'Saved';

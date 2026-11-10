@@ -29,6 +29,7 @@ If the server isn't reachable while the page is open (for example, after your co
 
 - **3 min / 5 min:** solve as many as you can before the clock runs out.
 - **Survival:** no clock.
+- Every run starts with a 3, 2, 1, Go! countdown over the board. The clock doesn't start until "Go!", and the first puzzle appears then. End run or Esc during the countdown cancels it, and you can switch the countdown off in Settings → Training.
 - In every mode, three misses end the run. Puzzle *n* is drawn from the rating band nearest `start + n × step`, which defaults to 600 + 40 per puzzle (you can change this in Settings).
 - You move by dragging a piece or by clicking it and then clicking a square. As on Lichess, any move that gives checkmate counts as correct.
 - When a run ends on your third miss, or the clock runs out in the middle of a puzzle, the board goes back to that position and keeps the correct move on screen (highlighted squares plus a green arrow) until you start the next run.
@@ -36,9 +37,9 @@ If the server isn't reachable while the page is open (for example, after your co
 
 ### Board controls
 
-- **Moving:** drag a piece, or click it and then click a square.
+- **Moving:** drag a piece, or click it and then click a square. Drops are forgiving: if you release slightly outside the square you meant, the piece goes to the nearest legal square, as long as it's within about a third of a square of its edge. Picking a piece up also selects it, so if a drag ends without a move (released somewhere illegal, off the board, or cancelled), the piece stays selected with its moves shown.
 - **Premoves:** while the opponent is replying, you can already move your next piece. The move is queued (both squares turn purple) and plays the instant it's your turn. It's dropped, without counting as a miss, if the opponent's reply makes it illegal.
-- **Changing your mind:** right-click or press Esc while holding a piece to put it back. This also clears a selection or a queued premove.
+- **Changing your mind:** right-click or press Esc while dragging to put the piece back. It stays selected, and a second right-click or Esc deselects it. Either one also clears a queued premove.
 - **Arrows and circles:** right-drag between two squares to draw an arrow, or right-click one square to circle it. Drawing the same shape again removes it, and any left click on the board clears them all. Hold Shift for green, Ctrl for red or Alt for blue (the default is orange). Knight arrows bend in an L.
 
 ## Appearance
